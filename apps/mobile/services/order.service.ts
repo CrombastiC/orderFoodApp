@@ -1,9 +1,7 @@
 import request from '@/request';
 import type {
   Category,
-  CreateFoodRequest,
   CreateOrderRequest,
-  Food,
   Order,
   OrderStatus,
 } from '@orderfood/common';
@@ -21,12 +19,6 @@ export interface UploadResult {
 export const getProductInfo = (id?: string) => {
   const url = id ? `/api/menu/getMenuList/${id}` : '/api/menu/getMenuList';
   return request.get<Category[]>(url);
-};
-/**
- * 创建菜品（测试用）
- */
-export const createDish = (data: CreateFoodRequest) => {
-  return request.post<Food>('/api/menu/food', data);
 };
 
 /**

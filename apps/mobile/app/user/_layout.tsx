@@ -11,14 +11,6 @@ export default function UserLayout() {
         }}
       />
       <Stack.Screen
-        name="createOrder"
-        options={{
-          title: '创建订单',
-          headerShown: true,
-          headerTitleAlign: 'center',
-        }}
-      />
-      <Stack.Screen
         name="coupon"
         options={{
           title: '优惠券',
