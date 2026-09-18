@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import type { LotteryPrize, Prisma } from '@prisma/client';
 
 @Injectable()
 export class PointsService {
@@ -55,8 +56,104 @@ export class PointsService {
     };
   }
 
-  // 兑换奖品（单抽）
-  async exchangePrize(userId: string, prizeId: string, costIntegral: number) {
+  // ==================== 抽奖概率配置 ====================
+
+  // 单抽消耗积分
+  private static readonly SINGLE_DRAW_COST = 200;
+  // 十连抽消耗积分
+  private static readonly MULTI_DRAW_COST = 2000;
+  // 大奖基础概率（1%）
+  private static readonly BIG_PRIZE_RATE = 0.01;
+  // 软保底起始抽数（距上次大奖）
+  private static readonly PITY_SOFT_START = 40;
+  // 软保底触发概率
+  private static readonly PITY_SOFT_RATE = 0.5;
+  // 硬保底：距上次大奖达到该抽数后必出大奖（即第 80 抽）
+  private static readonly PITY_HARD = 79;
+
+  // 按权重随机挑选（weight 相同则等概率，权重在奖品管理后台配置）
+  private weightedPick<T extends { weight: number }>(items: T[]): T {
+    const weights = items.map((item) => Math.max(1, item.weight));
+    let roll = Math.random() * weights.reduce((sum, w) => sum + w, 0);
+    for (let i = 0; i < items.length; i++) {
+      roll -= weights[i];
+      if (roll < 0) return items[i];
+    }
+    return items[items.length - 1];
+  }
+
+  /**
+   * 抽取 count 个奖品（概率与保底全部在服务端完成，客户端只负责展示）
+   * - 大奖基础概率 1%，其余为积分奖
+   * - 距上次大奖 40 抽起每抽 50% 概率触发软保底，79 抽后必出大奖（硬保底）
+   * - 十连抽整批最多 1 个大奖
+   * - 同类型奖品内部按 weight 加权随机
+   */
+  private drawPrizes(
+    prizes: LotteryPrize[],
+    drawsSinceBigPrize: number,
+    count: number,
+  ): { picked: LotteryPrize[]; drawsSinceBigPrize: number } {
+    const bigPrizes = prizes.filter((p) => p.prizeIntegral === 0 && p.stock > 0);
+    const pointPrizes = prizes.filter((p) => p.prizeIntegral > 0);
+    if (bigPrizes.length === 0 && pointPrizes.length === 0) {
+      throw new BadRequestException('抽奖活动暂无可用奖品');
+    }
+
+    let bigQuota = count >= 10 ? 1 : count;
+    let since = drawsSinceBigPrize;
+    const picked: LotteryPrize[] = [];
+
+    for (let i = 0; i < count; i++) {
+      const isGuaranteed =
+        since >= PointsService.PITY_HARD ||
+        (since >= PointsService.PITY_SOFT_START && Math.random() < PointsService.PITY_SOFT_RATE);
+      const wantBig = bigQuota > 0 && (isGuaranteed || Math.random() < PointsService.BIG_PRIZE_RATE);
+
+      let prize: LotteryPrize;
+      if (wantBig && bigPrizes.length > 0) {
+        prize = this.weightedPick(bigPrizes);
+        bigQuota -= 1;
+        since = 0;
+      } else if (pointPrizes.length > 0) {
+        prize = this.weightedPick(pointPrizes);
+        since += 1;
+      } else {
+        // 没有积分奖可发（极端情况），随机给一个有库存的大奖
+        prize = this.weightedPick(bigPrizes);
+        bigQuota -= 1;
+        since = 0;
+      }
+      picked.push(prize);
+    }
+
+    return { picked, drawsSinceBigPrize: since };
+  }
+
+  // 扣减实物大奖库存（带库存下限保护，防止并发超发）
+  private async settlePrizeStock(
+    tx: Prisma.TransactionClient,
+    picked: LotteryPrize[],
+  ) {
+    const bigPrizeCounts = new Map<string, number>();
+    for (const prize of picked) {
+      if (prize.prizeIntegral === 0) {
+        bigPrizeCounts.set(prize.id, (bigPrizeCounts.get(prize.id) || 0) + 1);
+      }
+    }
+    for (const [prizeId, count] of bigPrizeCounts) {
+      const result = await tx.lotteryPrize.updateMany({
+        where: { id: prizeId, stock: { gte: count } },
+        data: { stock: { decrement: count } },
+      });
+      if (result.count === 0) {
+        throw new BadRequestException('奖品库存不足');
+      }
+    }
+  }
+
+  // 单抽（概率由服务端决定）
+  async exchangePrize(userId: string, costIntegral: number) {
     return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({ where: { id: userId } });
       if (!user) {
@@ -81,39 +178,45 @@ export class PointsService {
         if (!todayCheckIn || usedFreeDraw) {
           throw new BadRequestException('今日暂无免费抽奖次数');
         }
-      } else if (costIntegral !== 200 || user.integral < 200) {
+      } else if (
+        costIntegral !== PointsService.SINGLE_DRAW_COST ||
+        user.integral < PointsService.SINGLE_DRAW_COST
+      ) {
         throw new BadRequestException('积分不足');
       }
 
-      const prize = await tx.lotteryPrize.findUnique({ where: { id: prizeId } });
-      if (!prize || !prize.isActive) throw new BadRequestException('奖品不存在');
-      if (prize.prizeIntegral === 0 && prize.stock <= 0) {
-        throw new BadRequestException('奖品库存不足');
-      }
+      // 服务端抽取奖品
+      const prizes = await tx.lotteryPrize.findMany({ where: { isActive: true } });
+      const { picked, drawsSinceBigPrize } = this.drawPrizes(
+        prizes,
+        user.drawsSinceBigPrize,
+        1,
+      );
+      const prize = picked[0];
 
+      // 扣除积分并更新保底计数
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          ...(isFreeDraw ? {} : { integral: { decrement: PointsService.SINGLE_DRAW_COST } }),
+          drawsSinceBigPrize,
+        },
+      });
       if (!isFreeDraw) {
-        await tx.user.update({
-          where: { id: userId },
-          data: { integral: { decrement: 200 } },
-        });
         await tx.pointRecord.create({
-          data: { userId, integral: 200, isGet: false, remark: '积分抽奖' },
+          data: { userId, integral: PointsService.SINGLE_DRAW_COST, isGet: false, remark: '积分抽奖' },
         });
       }
 
       // 创建抽奖记录
       await tx.lotteryRecord.create({
-        data: { userId, prizeId, costIntegral },
+        data: { userId, prizeId: prize.id, costIntegral },
       });
 
-      if (prize.prizeIntegral === 0) {
-        await tx.lotteryPrize.update({
-          where: { id: prize.id },
-          data: { stock: { decrement: 1 } },
-        });
-      }
+      // 实物大奖扣库存
+      await this.settlePrizeStock(tx, picked);
 
-      // 如果是积分奖励，返还积分
+      // 积分奖返还积分
       if (prize.prizeIntegral > 0) {
         await tx.user.update({
           where: { id: userId },
@@ -133,63 +236,52 @@ export class PointsService {
     });
   }
 
-  // 十连抽
-  async exchangeMultiPrize(userId: string, prizeIds: string[], costIntegral: number) {
+  // 十连抽（概率由服务端决定，整批最多 1 个大奖）
+  async exchangeMultiPrize(userId: string, costIntegral: number) {
     return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({ where: { id: userId } });
-      if (!user || costIntegral !== 2000 || user.integral < 2000) {
+      if (!user) {
+        throw new BadRequestException('用户不存在');
+      }
+      if (costIntegral !== PointsService.MULTI_DRAW_COST) {
+        throw new BadRequestException('十连抽消耗积分不正确');
+      }
+      if (user.integral < PointsService.MULTI_DRAW_COST) {
         throw new BadRequestException('积分不足');
       }
 
-      const prizes = await tx.lotteryPrize.findMany({
-        where: { id: { in: prizeIds }, isActive: true },
-      });
-      const prizeMap = new Map(prizes.map((prize) => [prize.id, prize]));
-      const orderedPrizes = prizeIds.map((prizeId) => prizeMap.get(prizeId));
-      if (orderedPrizes.some((prize) => !prize)) {
-        throw new BadRequestException('奖品不存在或已下架');
-      }
+      // 服务端抽取奖品
+      const prizes = await tx.lotteryPrize.findMany({ where: { isActive: true } });
+      const { picked, drawsSinceBigPrize } = this.drawPrizes(
+        prizes,
+        user.drawsSinceBigPrize,
+        10,
+      );
 
-      const bigPrizeCounts = new Map<string, number>();
-      for (const prize of orderedPrizes) {
-        if (prize && prize.prizeIntegral === 0) {
-          bigPrizeCounts.set(prize.id, (bigPrizeCounts.get(prize.id) || 0) + 1);
-        }
-      }
-      for (const [prizeId, count] of bigPrizeCounts) {
-        const prize = prizeMap.get(prizeId)!;
-        if (prize.stock < count) {
-          throw new BadRequestException(`奖品「${prize.prizeName}」库存不足`);
-        }
-      }
-
-      // 扣除积分
+      // 扣除积分并更新保底计数
       await tx.user.update({
         where: { id: userId },
-        data: { integral: { decrement: 2000 } },
+        data: {
+          integral: { decrement: PointsService.MULTI_DRAW_COST },
+          drawsSinceBigPrize,
+        },
       });
       await tx.pointRecord.create({
-        data: { userId, integral: 2000, isGet: false, remark: '积分十连抽' },
+        data: { userId, integral: PointsService.MULTI_DRAW_COST, isGet: false, remark: '积分十连抽' },
       });
 
       // 创建抽奖记录
-      for (const prizeId of prizeIds) {
+      for (const prize of picked) {
         await tx.lotteryRecord.create({
-          data: { userId, prizeId, costIntegral: 200 },
+          data: { userId, prizeId: prize.id, costIntegral: PointsService.SINGLE_DRAW_COST },
         });
       }
 
-      for (const [prizeId, count] of bigPrizeCounts) {
-        await tx.lotteryPrize.update({
-          where: { id: prizeId },
-          data: { stock: { decrement: count } },
-        });
-      }
+      // 实物大奖扣库存
+      await this.settlePrizeStock(tx, picked);
 
-      const earnedIntegral = orderedPrizes.reduce(
-        (total, prize) => total + (prize?.prizeIntegral || 0),
-        0,
-      );
+      // 积分奖返还积分
+      const earnedIntegral = picked.reduce((total, prize) => total + prize.prizeIntegral, 0);
       if (earnedIntegral > 0) {
         await tx.user.update({
           where: { id: userId },
@@ -205,7 +297,7 @@ export class PointsService {
         });
       }
 
-      return orderedPrizes.map((prize) => this.toLuckyRollData(prize!));
+      return picked.map((prize) => this.toLuckyRollData(prize));
     });
   }
 
@@ -281,6 +373,7 @@ export class PointsService {
     prizeIntegral: number;
     prizeValue?: number;
     stock?: number;
+    weight?: number;
     sortOrder?: number;
   }) {
     return this.prisma.lotteryPrize.create({ data });
@@ -293,6 +386,7 @@ export class PointsService {
     prizeIntegral?: number;
     prizeValue?: number;
     stock?: number;
+    weight?: number;
     sortOrder?: number;
     isActive?: boolean;
   }) {

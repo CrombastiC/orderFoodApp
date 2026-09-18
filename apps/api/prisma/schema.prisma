@@ -23,6 +23,7 @@ model User {
   balance   Float     @default(0)
   integral  Int       @default(0) // 积分
   role      String    @default("user") // user: 普通用户, admin: 管理员
+  drawsSinceBigPrize Int @default(0) // 距上次抽中大奖的抽数（抽奖保底用）
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -107,6 +108,7 @@ model LotteryPrize {
   prizeIntegral  Int             @default(0) // 0表示实物大奖，>0表示积分
   prizeValue     Float? // 奖品价值
   stock          Int             @default(0) // 库存
+  weight         Int             @default(1) // 中奖权重（同类型奖品内部相对概率，默认 1 为均等）
   sortOrder      Int             @default(0)
   isActive       Boolean         @default(true)
   lotteryRecords LotteryRecord[]

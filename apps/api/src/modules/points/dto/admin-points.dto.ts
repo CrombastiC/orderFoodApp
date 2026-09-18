@@ -38,6 +38,13 @@ export class CreatePrizeDto {
   @Min(0)
   stock?: number;
 
+  @ApiPropertyOptional({ description: '中奖权重（同类型奖品内部相对概率）', default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  weight?: number;
+
   @ApiPropertyOptional({ description: '排序', default: 0 })
   @IsOptional()
   @Type(() => Number)
@@ -72,6 +79,12 @@ export class UpdatePrizeDto {
   @IsInt()
   @Min(0)
   stock?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  weight?: number;
 
   @IsOptional()
   @Type(() => Number)

@@ -26,7 +26,7 @@ export class PointsController {
     @CurrentUser('id') userId: string,
     @Body() body: ExchangePrizeDto,
   ) {
-    return this.pointsService.exchangePrize(userId, body.prizeId, body.costIntegral);
+    return this.pointsService.exchangePrize(userId, body.costIntegral);
   }
 
   @Post('exchangeMultiPrize')
@@ -35,7 +35,7 @@ export class PointsController {
     @CurrentUser('id') userId: string,
     @Body() body: ExchangeMultiPrizeDto,
   ) {
-    return this.pointsService.exchangeMultiPrize(userId, body.prizeIds, body.costIntegral);
+    return this.pointsService.exchangeMultiPrize(userId, body.costIntegral);
   }
 
   @Get('getWinningRecords')
