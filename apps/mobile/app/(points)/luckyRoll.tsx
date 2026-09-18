@@ -32,11 +32,6 @@ export default function LuckyRollScreen() {
   const [resultPrizes, setResultPrizes] = useState<LuckyRollData[]>([]);
   const [isMultiResult, setIsMultiResult] = useState<boolean>(false);
 
-  // 抽奖次数统计(用于保底机制)
-  const [drawCount, setDrawCount] = useState<number>(0);
-  
-  // 距离上次大奖的抽数
-  const [drawsSinceLastBigPrize, setDrawsSinceLastBigPrize] = useState<number>(0);
 
   // 围观大奖数据
   const [bigPrizeData, setBigPrizeData] = useState<WinningInfo[]>([]);
@@ -138,91 +133,37 @@ export default function LuckyRollScreen() {
     }
   }
 
-  /**
-   * 根据新的概率规则选择奖品
-   * @param isGuaranteed 是否触发保底
-   * @returns 中奖奖品的索引
-   */
-  const getWeightedRandomPrize = (isGuaranteed: boolean = false): number => {
-    // 分离大奖和积分奖励
-    const bigPrizes = luckyRollData
-      .map((prize, index) => ({ prize, index }))
-      .filter(item => item.prize.prizeIntegral === 0);
-    
-    const pointPrizes = luckyRollData
-      .map((prize, index) => ({ prize, index }))
-      .filter(item => item.prize.prizeIntegral !== 0);
-
-    // 如果触发保底，必定返回大奖
-    if (isGuaranteed && bigPrizes.length > 0) {
-      const randomBigPrize = bigPrizes[Math.floor(Math.random() * bigPrizes.length)];
-      return randomBigPrize.index;
-    }
-
-    // 平时单抽：1%概率大奖，99%积分
-    const random = Math.random();
-    if (random < 0.01 && bigPrizes.length > 0) {
-      // 1%概率抽到大奖
-      const randomBigPrize = bigPrizes[Math.floor(Math.random() * bigPrizes.length)];
-      return randomBigPrize.index;
-    } else {
-      // 99%概率抽到积分
-      if (pointPrizes.length > 0) {
-        const randomPointPrize = pointPrizes[Math.floor(Math.random() * pointPrizes.length)];
-        return randomPointPrize.index;
-      }
-    }
-
-    // 保底：如果没有对应类型的奖品，随机返回一个
-    return Math.floor(Math.random() * luckyRollData.length);
-  };
-
-  /**
-   * 检查是否触发保底机制
-   * @returns 是否应该给大奖
-   */
-  const checkGuarantee = (): boolean => {
-    // 每80抽必定包含一个大奖
-    if (drawsSinceLastBigPrize >= 79) {
-      return true;
-    }
-    
-    // 每80抽有50%概率包含额外大奖（在40-79抽之间）
-    if (drawsSinceLastBigPrize >= 40 && drawsSinceLastBigPrize < 79) {
-      return Math.random() < 0.5;
-    }
-
-    return false;
-  };
-
-  // 开始抽奖动画
-  const startLottery = () => {
+  // 开始抽奖：先请求服务端决定中奖结果，再播放转盘动画
+  const startLottery = async () => {
     if (isRolling) return; // 如果正在抽奖,不响应
 
     // 判断是否免费抽奖
     const costIntegral = freeDrawCount > 0 ? 0 : 200;
-
     // 如果不是免费抽奖,检查积分是否足够
     if (freeDrawCount <= 0 && currentPoints < 200) {
       alert('积分不足,无法抽奖');
       return;
     }
 
+    // 中奖结果由服务端概率与保底机制决定
+    const [error, result] = await pointsService.exchangePrize(costIntegral);
+    if (error || !result) {
+      alert(`抽奖失败:${error}`);
+      return;
+    }
+
     setIsRolling(true);
     setCurrentIndex(-1);
 
-    // 检查是否触发保底
-    const isGuaranteed = checkGuarantee();
-    
-    // 根据保底机制和概率计算中奖位置
-    const targetPrizeIndex = getWeightedRandomPrize(isGuaranteed);
+    const prizeIndex = luckyRollData.findIndex((item) => item.id === result.id);
+    const targetPrizeIndex = prizeIndex >= 0 ? prizeIndex : 0; // 服务端返回的奖品在九宫格中的位置
+    const targetIndex = LOTTERY_PATH.indexOf(targetPrizeIndex); // 在路径中找到目标位置
 
     let step = 0; // 当前步数
     let speed = 100; // 初始速度(毫秒)
     const totalSteps = 30; // 总共转动的步数(至少转3圈多)
-    const targetIndex = LOTTERY_PATH.indexOf(targetPrizeIndex); // 在路径中找到目标位置
 
-    const animate = async () => {
+    const animate = () => {
       step++;
       const pathIndex = step % LOTTERY_PATH.length;
       setCurrentIndex(LOTTERY_PATH[pathIndex]);
@@ -236,41 +177,17 @@ export default function LuckyRollScreen() {
 
       // 检查是否到达目标位置
       if (step >= totalSteps && pathIndex === targetIndex) {
-        // 抽奖结束
         if (timerRef.current) {
           clearTimeout(timerRef.current);
         }
 
-        // 调用接口兑换奖品,根据是否免费抽奖传入不同的积分值
-        const finalIndex = LOTTERY_PATH[targetIndex];
-        const [error, result] = await pointsService.exchangePrize(luckyRollData[finalIndex].id, costIntegral);
-
         setTimeout(() => {
           setIsRolling(false);
 
-          // 检查接口是否报错
-          if (error) {
-            alert(`兑换失败:${error}`);
-            return;
-          }
-
-          // 接口没报错才提示结果 - 使用弹窗展示
-          const prize = luckyRollData[finalIndex];
-          setResultPrizes([prize]);
+          // 弹窗展示中奖结果
+          setResultPrizes([result]);
           setIsMultiResult(false);
           setShowResultModal(true);
-
-          // 更新抽奖次数统计
-          setDrawCount(prev => prev + 1);
-          
-          // 更新距离上次大奖的抽数
-          if (prize.prizeIntegral === 0) {
-            // 抽到大奖，重置计数器
-            setDrawsSinceLastBigPrize(0);
-          } else {
-            // 没抽到大奖，计数器+1
-            setDrawsSinceLastBigPrize(prev => prev + 1);
-          }
 
           // 更新积分和免费次数和抽奖数据
           getLuckyRollData();
@@ -285,71 +202,31 @@ export default function LuckyRollScreen() {
     };
 
     animate();
-  };  // 抽奖结果处理函数
+  };
+
+  // 抽奖结果处理函数
   const handlePress = async (type: string) => {
     if (type === 'single') {
       // 单抽逻辑
       startLottery();
         } else if (type === 'multi') {
-      // 十连抽逻辑
       if (currentPoints < 2000) return alert('积分不足,无法十连抽');
       if (isRolling) return; // 如果正在抽奖,不响应
+
+      // 中奖结果由服务端概率与保底机制决定
+      const [error, result] = await pointsService.exchangeMultiPrize(2000);
+      if (error || !result) {
+        alert(`十连抽失败:${error}`);
+        return;
+      }
 
       setIsRolling(true);
       setCurrentIndex(-1);
 
       let step = 0;
       let speed = 50; // 初始速度更快
-      const totalRounds = 10; // 总共10次抽奖
+      const totalRounds = 10; // 总共10圈
       let currentRound = 0;
-
-      // 构造10个奖品ID - 根据新规则选择
-      const prizeIds: string[] = [];
-      const selectedPrizes: LuckyRollData[] = [];
-      let bigPrizeCount = 0; // 记录十连中大奖数量
-      
-      // 分离大奖和积分奖励
-      const bigPrizes = luckyRollData.filter(prize => prize.prizeIntegral === 0);
-      const pointPrizes = luckyRollData.filter(prize => prize.prizeIntegral !== 0);
-
-      for (let i = 0; i < 10; i++) {
-        let selectedPrize: LuckyRollData;
-        
-        // 检查当前累计抽数是否触发保底
-        const currentDrawsSince = drawsSinceLastBigPrize + i;
-        const isGuaranteed = currentDrawsSince >= 79 || 
-                            (currentDrawsSince >= 40 && currentDrawsSince < 79 && Math.random() < 0.5);
-        
-        if (isGuaranteed && bigPrizeCount === 0 && bigPrizes.length > 0) {
-          // 触发保底且十连中还没大奖，给一个大奖
-          selectedPrize = bigPrizes[Math.floor(Math.random() * bigPrizes.length)];
-          bigPrizeCount++;
-        } else if (bigPrizeCount === 0 && Math.random() < 0.01 && bigPrizes.length > 0) {
-          // 1%概率给大奖（如果十连中还没出过大奖）
-          selectedPrize = bigPrizes[Math.floor(Math.random() * bigPrizes.length)];
-          bigPrizeCount++;
-        } else {
-          // 其他情况给积分
-          if (pointPrizes.length > 0) {
-            selectedPrize = pointPrizes[Math.floor(Math.random() * pointPrizes.length)];
-          } else {
-            selectedPrize = luckyRollData[Math.floor(Math.random() * luckyRollData.length)];
-          }
-        }
-        
-        prizeIds.push(selectedPrize.id);
-        selectedPrizes.push(selectedPrize);
-      }
-
-      // 先调用接口获取十连抽结果
-      const [error, result] = await pointsService.exchangeMultiPrize(prizeIds, 2000);
-      
-      if (error) {
-        setIsRolling(false);
-        alert(`十连抽失败:${error}`);
-        return;
-      }
-      console.log('十连结果',result);
 
       // 动画函数 - 逐渐加速
       const animate = () => {
@@ -373,29 +250,12 @@ export default function LuckyRollScreen() {
             setIsRolling(false);
             setCurrentIndex(-1);
 
-            // 展示十连抽结果 - 使用弹窗展示
-            setResultPrizes(result || []);
+            // 弹窗展示十连抽结果
+            setResultPrizes(result);
             setIsMultiResult(true);
             setShowResultModal(true);
 
-            // 更新抽奖次数统计(十连抽算10次)
-            setDrawCount(prev => prev + 10);
-            
-            // 更新距离上次大奖的抽数
-            if (bigPrizeCount > 0) {
-              // 十连中抽到了大奖
-              // 找到最后一个大奖的位置，重置计数器为该位置之后的抽数
-              const lastBigPrizeIndex = selectedPrizes.map((p, idx) => 
-                p.prizeIntegral === 0 ? idx : -1
-              ).filter(idx => idx !== -1).pop() || 0;
-              
-              setDrawsSinceLastBigPrize(9 - lastBigPrizeIndex);
-            } else {
-              // 十连中没抽到大奖
-              setDrawsSinceLastBigPrize(prev => prev + 10);
-            }
-
-            // 更新积分和数据
+            // 更新积分和抽奖数据
             getLuckyRollData();
             fetchBigPrizeData();
             fetchBroadcastData();

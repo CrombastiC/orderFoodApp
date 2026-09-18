@@ -48,17 +48,18 @@ export const pointsService = {
   },
 
   /**
-   * 兑换奖品(单抽)
+   * 抽奖(单抽)：中奖结果由服务端概率决定
+   * @param integral 消耗积分，签到免费抽为 0，普通单抽为 200
    */
-  exchangePrize: (prizeId: string, integral: number) => {
-    return request.post<LuckyRollData>('/api/points/exchangePrize', { prizeId, costIntegral: integral });
+  exchangePrize: (integral: number) => {
+    return request.post<LuckyRollData>('/api/points/exchangePrize', { costIntegral: integral });
   },
 
   /**
-   * 兑换奖品(十连抽)
+   * 抽奖(十连抽)：中奖结果由服务端概率决定，固定消耗 2000 积分
    */
-  exchangeMultiPrize: (prizeIds: string[], integral: number) => {
-    return request.post<LuckyRollData[]>('/api/points/exchangeMultiPrize', { prizeIds, costIntegral: integral });
+  exchangeMultiPrize: (integral: number) => {
+    return request.post<LuckyRollData[]>('/api/points/exchangeMultiPrize', { costIntegral: integral });
   },
 
   /**
