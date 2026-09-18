@@ -15,6 +15,7 @@ import { JwtAuthGuard } from "./modules/auth/guards/jwt-auth.guard";
 import { AdminModule } from "./modules/admin/admin.module";
 import { QueueModule } from "./modules/queue/queue.module";
 import { SupportModule } from "./modules/support/support.module";
+import { AddressModule } from "./modules/address/address.module";
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { SupportModule } from "./modules/support/support.module";
     AdminModule,
     QueueModule,
     SupportModule,
+    AddressModule,
   ],
   providers: [
     {

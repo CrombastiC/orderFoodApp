@@ -34,6 +34,7 @@ model User {
   userCoupons         UserCoupon[]
   orders              Order[]
   checkInRecords      CheckInRecord[]
+  addresses           Address[]
   paymentRecords      PaymentRecord[]
   queueTickets        QueueTicket[]
   supportConversation SupportConversation?
@@ -318,6 +319,23 @@ model StoreQueueCounter {
 
   @@id([storeId, queueDate])
   @@map("store_queue_counters")
+}
+
+// 收货地址
+model Address {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  receiverName String // 收件人姓名
+  phone        String // 联系电话
+  region       String // 省市区
+  detail       String // 详细地址
+  isDefault    Boolean  @default(false) // 是否默认地址
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@map("addresses")
 }
 
 model QueueTicket {
