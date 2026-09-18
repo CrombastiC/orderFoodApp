@@ -51,18 +51,18 @@ export interface WinningInfo {
 }
 
 /**
- * 兑换奖品请求（单抽）
+ * 抽奖请求（单抽）
+ * 中奖结果由服务端概率决定，客户端只传消耗积分（签到免费抽为 0，普通单抽为 200）
  */
 export interface ExchangePrizeRequest {
-  prizeId: string;
   costIntegral: number;
 }
 
 /**
- * 兑换奖品请求（十连抽）
+ * 抽奖请求（十连抽）
+ * 中奖结果由服务端概率决定，固定消耗 2000 积分
  */
 export interface ExchangeMultiPrizeRequest {
-  prizeIds: string[];
   costIntegral: number;
 }
 
