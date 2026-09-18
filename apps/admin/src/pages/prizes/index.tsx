@@ -26,6 +26,7 @@ interface PrizeFormValues {
   prizeIntegral: number;
   prizeValue?: number;
   stock?: number;
+  weight?: number;
   sortOrder?: number;
   isActive?: boolean;
 }
@@ -51,7 +52,7 @@ export default function PrizesPage() {
   const openCreate = () => {
     setEditing(undefined);
     form.resetFields();
-    form.setFieldsValue({ prizeIntegral: 0, stock: 0, sortOrder: 0, isActive: true });
+    form.setFieldsValue({ prizeIntegral: 0, stock: 0, weight: 1, sortOrder: 0, isActive: true });
     setOpen(true);
   };
 
@@ -96,6 +97,7 @@ export default function PrizesPage() {
     },
     { title: '参考价值', dataIndex: 'prizeValue', render: (value: number | null) => value ? `¥${value.toFixed(2)}` : '-' },
     { title: '库存', dataIndex: 'stock', render: (value: number) => <span style={{ color: value <= 5 ? '#cf1322' : undefined }}>{value}</span> },
+    { title: '权重', dataIndex: 'weight' },
     { title: '排序', dataIndex: 'sortOrder' },
     { title: '状态', dataIndex: 'isActive', render: (value: boolean, prize) => <Switch size="small" checked={value} onChange={() => toggle(prize.id)} /> },
     {
@@ -136,6 +138,7 @@ export default function PrizesPage() {
           </Space>
           <Space align="start" style={{ display: 'flex' }}>
             <Form.Item name="stock" label="库存" style={{ flex: 1 }}><InputNumber min={0} precision={0} style={{ width: '100%' }} /></Form.Item>
+            <Form.Item name="weight" label="中奖权重" tooltip="同类型奖品内部的相对中奖概率，默认 1 表示均等" style={{ flex: 1 }}><InputNumber min={1} precision={0} style={{ width: '100%' }} /></Form.Item>
             <Form.Item name="sortOrder" label="排序" style={{ flex: 1 }}><InputNumber min={0} precision={0} style={{ width: '100%' }} /></Form.Item>
           </Space>
           {editing && <Form.Item name="isActive" label="启用状态" valuePropName="checked"><Switch /></Form.Item>}

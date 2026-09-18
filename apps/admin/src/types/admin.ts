@@ -93,6 +93,7 @@ export interface LotteryPrize {
   prizeIntegral: number;
   prizeValue: number | null;
   stock: number;
+  weight: number;
   sortOrder: number;
   isActive: boolean;
   createdAt: string;
