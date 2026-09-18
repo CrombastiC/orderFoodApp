@@ -19,6 +19,14 @@ export default function UserLayout() {
         }}
       />
       <Stack.Screen
+        name="address"
+        options={{
+          title: '地址管理',
+          headerShown: true,
+          headerTitleAlign: 'center',
+        }}
+      />
+      <Stack.Screen
         name="support"
         options={{
           title: '在线客服',

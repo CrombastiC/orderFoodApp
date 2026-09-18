@@ -20,16 +20,6 @@ const menuItems: MenuListItem[] = [
     onPress: () => router.push('/orders'),
   },
   {
-    key: 'member-benefits',
-    icon: 'crown-outline',
-    label: '会员权益',
-  },
-  {
-    key: 'task-center',
-    icon: 'checkbox-marked-circle-outline',
-    label: '任务中心',
-  },
-  {
     key: 'lottery',
     icon: 'slot-machine',
     label: '幸运抽奖',
@@ -45,11 +35,7 @@ const menuItems: MenuListItem[] = [
     key: 'address',
     icon: 'map-marker-outline',
     label: '地址管理',
-  },
-  {
-    key: 'invoice',
-    icon: 'receipt',
-    label: '发票管理',
+    onPress: () => router.push('/user/address' as any),
   },
   {
     key: 'customer-service',
