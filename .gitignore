@@ -86,3 +86,6 @@ prisma/migrations/
 # Lock files - only use pnpm
 package-lock.json
 yarn.lock
+
+# Archify 视觉校验产物
+*.visual-check.*
