@@ -30,7 +30,7 @@ OrderFoodApp/
 pnpm install
 
 # 分别启动
-pnpm dev:api       # http://localhost:5000
+pnpm dev:api       # http://localhost:5001
 pnpm dev:admin     # http://localhost:3000
 pnpm dev:mobile    # Expo 开发服务器
 
@@ -38,7 +38,7 @@ pnpm dev:mobile    # Expo 开发服务器
 pnpm runall
 ```
 
-API 文档：`http://localhost:5000/api-docs`
+API 文档：`http://localhost:5001/api-docs`
 
 管理后台种子账号：`13800000000 / admin123`。仅用于本地开发，部署前请修改密码。
 
@@ -48,7 +48,7 @@ API 文档：`http://localhost:5000/api-docs`
 
 ```env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/orderfood?schema=public"
-PORT=5000
+PORT=5001
 API_PREFIX=api
 
 JWT_SECRET="replace-me"

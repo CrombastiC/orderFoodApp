@@ -11,7 +11,7 @@ pnpm dev:api
 pnpm dev:admin
 ```
 
-开发服务器会把 `/api` 和 `/uploads` 代理到 `http://localhost:5000`。
+开发服务器会把 `/api` 和 `/uploads` 代理到 `http://localhost:5001`。
 
 默认管理员：`13800000000 / admin123`。
 

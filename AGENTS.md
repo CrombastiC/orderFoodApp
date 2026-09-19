@@ -38,7 +38,7 @@ OrderFoodApp/
 
 ```bash
 pnpm install          # 安装依赖
-pnpm dev:api          # 后端开发 http://localhost:5000
+pnpm dev:api          # 后端开发 http://localhost:5001
 pnpm dev:mobile       # 前端 Expo Go
 pnpm dev:admin        # 管理后台 http://localhost:5173
 pnpm dev              # 同 dev:api
@@ -47,7 +47,7 @@ pnpm prisma:studio    # Prisma Studio
 pnpm prisma:seed      # 种子数据
 ```
 
-后端 API 文档：`http://localhost:5000/api-docs`
+后端 API 文档：`http://localhost:5001/api-docs`
 
 ## 编码约定
 
