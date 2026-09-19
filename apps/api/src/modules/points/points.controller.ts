@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PointsService } from './points.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import {
   ExchangeMultiPrizeDto,
   ExchangePrizeDto,
@@ -39,12 +40,14 @@ export class PointsController {
   }
 
   @Get('getWinningRecords')
+  @Public()
   @ApiOperation({ summary: '获取中奖记录' })
   async getWinningRecords(@Query('isBigPrize') isBigPrize?: string) {
     return this.pointsService.getWinningRecords(isBigPrize === 'true');
   }
 
   @Get('getCommodityList')
+  @Public()
   @ApiOperation({ summary: '获取积分商城商品' })
   async getCommodityList() {
     return this.pointsService.getCommodityList();
