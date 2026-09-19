@@ -2,6 +2,7 @@
  * 购物车页面
  */
 
+import { useAuthGate } from '@/hooks/use-auth-gate';
 import { useCartStore } from '@/stores/cart-store';
 import { resolveImageUrl } from '@/utils/image';
 import { router } from 'expo-router';
@@ -27,6 +28,7 @@ function FoodImage({ uri }: { uri: string }) {
 }
 
 export default function CartScreen() {
+  const { requireLogin } = useAuthGate();
   const { items, updateQuantity, removeItem, clearCart } = useCartStore();
   const totalCount = useCartStore((s) => s.getTotalCount());
   const totalPrice = useCartStore((s) => s.getTotalPrice());
@@ -108,7 +110,7 @@ export default function CartScreen() {
         <TouchableOpacity
           style={[styles.checkoutButton, totalCount === 0 && styles.checkoutButtonDisabled]}
           disabled={totalCount === 0}
-          onPress={() => router.push('/(orderfood)/settlement')}
+          onPress={() => requireLogin(() => router.push('/(orderfood)/settlement'))}
         >
           <Text style={styles.checkoutButtonText}>去结算</Text>
         </TouchableOpacity>

@@ -3,7 +3,9 @@
  * 负责整个应用的全局配置、主题设置和导航结构
  */
 
+import { AuthGateProvider } from '@/components/auth/AuthGateProvider';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuthStore } from '@/stores/auth-store';
 import { useProfileStore } from '@/stores/profile-store';
 import { ToastProvider } from '@/utils/toast';
 import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router/react-navigation";
@@ -43,6 +45,9 @@ export default function RootLayout() {
   // 从状态管理 store 中获取加载用户配置的方法
   const loadProfiles = useProfileStore((state) => state.loadProfiles);
 
+  // 从认证 store 中获取恢复登录态的方法
+  const hydrate = useAuthStore((state) => state.hydrate);
+
   /**
    * 应用启动时加载持久化数据
    * 在组件挂载后执行，用于恢复用户之前保存的应用状态
@@ -51,6 +56,13 @@ export default function RootLayout() {
     loadProfiles().catch(console.error);
   }, [loadProfiles]);
 
+  /**
+   * 应用启动时恢复登录态
+   */
+  useEffect(() => {
+    hydrate().catch(console.error);
+  }, [hydrate]);
+
   return (
     // Material Design 3 主题提供器，为整个应用提供 Material Design 组件样式
     <PaperProvider theme={paperTheme}>
@@ -58,6 +70,8 @@ export default function RootLayout() {
       <ThemeProvider value={navigationTheme}>
         {/* Toast 全局提供器，为整个应用提供 Toast 功能 */}
         <ToastProvider>
+          {/* 登录门禁提供器，提供 requireLogin 及全局登录面板 */}
+          <AuthGateProvider>
           {/* Expo Router 的堆栈导航器，管理页面间的导航 */}
           <Stack>
             {/* 开屏页面路由，隐藏默认头部 */}
@@ -79,6 +93,7 @@ export default function RootLayout() {
             {/* 排队取号相关页面 */}
             <Stack.Screen name="queue" options={{ headerShown: false }} />
           </Stack>
+          </AuthGateProvider>
           {/* 状态栏组件，自动适配系统主题 */}
           <StatusBar style="auto" />
         </ToastProvider>

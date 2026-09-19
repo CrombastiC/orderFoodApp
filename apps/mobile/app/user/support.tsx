@@ -1,3 +1,4 @@
+import { RequireLogin } from "@/components/auth/RequireLogin";
 import {
   supportService,
   type SupportMessage,
@@ -33,7 +34,7 @@ function formatFileSize(size: number | null) {
   return `${(size / 1024 / 1024).toFixed(1)} MB`;
 }
 
-export default function SupportChatScreen() {
+function SupportContent() {
   const headerHeight = useHeaderHeight();
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [conversationStatus, setConversationStatus] = useState<
@@ -355,6 +356,14 @@ export default function SupportChatScreen() {
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+export default function SupportChatScreen() {
+  return (
+    <RequireLogin title="登录后联系客服" description="登录即可与客服在线沟通">
+      <SupportContent />
+    </RequireLogin>
   );
 }
 

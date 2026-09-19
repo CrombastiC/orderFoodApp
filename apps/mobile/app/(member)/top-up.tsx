@@ -1,3 +1,4 @@
+import { RequireLogin } from '@/components/auth/RequireLogin';
 import TabSwitch from '@/components/ui/TabSwitch';
 import { TopUpRecord, userService } from '@/services';
 import { router, useFocusEffect, useNavigation } from 'expo-router';
@@ -20,7 +21,7 @@ const topUpTabs = [
   { key: 'history' as const, label: '充值记录' },
 ];
 
-export default function TopUpScreen() {
+function TopUpContent() {
   const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState<'topup' | 'history'>('topup');//充值tab or 记录tab
   const [selectedAmount, setSelectedAmount] = useState<string | null>(null);//选择的金额卡片(改为string类型以匹配moneyId)
@@ -674,6 +675,14 @@ export default function TopUpScreen() {
         </TouchableOpacity>
       </Modal>
     </SafeAreaView>
+  );
+}
+
+export default function TopUpScreen() {
+  return (
+    <RequireLogin title="登录后充值" description="登录即可为账户充值">
+      <TopUpContent />
+    </RequireLogin>
   );
 }
 

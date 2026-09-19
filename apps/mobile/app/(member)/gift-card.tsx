@@ -2,6 +2,7 @@
  * 礼品卡兑换页
  */
 
+import { RequireLogin } from '@/components/auth/RequireLogin';
 import { userService } from '@/services';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -9,7 +10,7 @@ import { Alert, StyleSheet, TextInput, TouchableOpacity, View } from 'react-nati
 import { Icon, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function GiftCardScreen() {
+function GiftCardContent() {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [balance, setBalance] = useState(0);
@@ -102,6 +103,14 @@ export default function GiftCardScreen() {
         </View>
       </View>
     </SafeAreaView>
+  );
+}
+
+export default function GiftCardScreen() {
+  return (
+    <RequireLogin title="登录后查看礼品卡" description="登录即可管理礼品卡">
+      <GiftCardContent />
+    </RequireLogin>
   );
 }
 

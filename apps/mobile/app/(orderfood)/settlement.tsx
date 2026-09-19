@@ -1,3 +1,4 @@
+import { RequireLogin } from '@/components/auth/RequireLogin';
 import { orderService } from '@/services/order.service';
 import { userService } from '@/services';
 import { useCartStore } from '@/stores/cart-store';
@@ -17,7 +18,7 @@ import {
 import { Icon } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function SettlementScreen() {
+function SettlementContent() {
   const {
     items,
     orderType,
@@ -324,6 +325,14 @@ export default function SettlementScreen() {
         </TouchableOpacity>
       </View>
     </SafeAreaView>
+  );
+}
+
+export default function SettlementScreen() {
+  return (
+    <RequireLogin title="登录后下单" description="请先登录再继续结算">
+      <SettlementContent />
+    </RequireLogin>
   );
 }
 

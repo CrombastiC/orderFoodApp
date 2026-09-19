@@ -1,6 +1,8 @@
+import { RequireLogin } from '@/components/auth/RequireLogin';
 import MenuList, { MenuListItem } from '@/components/ui/MenuList';
-import { tokenManager, userService, type UserProfile } from "@/services";
+import { userService, type UserProfile } from "@/services";
 import { uploadImage } from "@/services/order.service";
+import { useAuthStore } from '@/stores/auth-store';
 import { formatDateChinese } from "@/utils/dateUtils";
 import { StorageUtils } from "@/utils/storage";
 import ToastManager from "@/utils/toast";
@@ -25,7 +27,7 @@ import {
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function AccountScreen() {
+function AccountContent() {
   const [date, setDate] = useState<Date | null>(null);
   const [show, setShow] = useState(false);
   const [userInfo, setUserInfo] = useState<UserProfile | null>(null);
@@ -226,7 +228,7 @@ export default function AccountScreen() {
           text: '确定',
           onPress: async () => {
             // 清除本地登录信息
-            await tokenManager.clearLoginInfo();
+            await useAuthStore.getState().clearSession();
             await StorageUtils.delete('userName');
             await StorageUtils.delete('userAvatar');
             // 跳转到登录页
@@ -421,6 +423,14 @@ export default function AccountScreen() {
         </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
+  );
+}
+
+export default function AccountScreen() {
+  return (
+    <RequireLogin title="登录后管理资料" description="登录即可编辑个人资料">
+      <AccountContent />
+    </RequireLogin>
   );
 }
 

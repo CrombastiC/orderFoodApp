@@ -1,3 +1,4 @@
+import { RequireLogin } from "@/components/auth/RequireLogin";
 import { queueService, type QueueTicket } from "@/services";
 import ToastManager from "@/utils/toast";
 import { router, useFocusEffect } from "expo-router";
@@ -15,7 +16,7 @@ import {
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function QueueTicketScreen() {
+function QueueTicketContent() {
   const [ticket, setTicket] = useState<QueueTicket | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -202,6 +203,14 @@ export default function QueueTicketScreen() {
         </Dialog>
       </Portal>
     </SafeAreaView>
+  );
+}
+
+export default function QueueTicketScreen() {
+  return (
+    <RequireLogin title="登录后查看排队" description="登录即可查看您的排队号码">
+      <QueueTicketContent />
+    </RequireLogin>
   );
 }
 

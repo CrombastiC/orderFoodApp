@@ -1,3 +1,4 @@
+import { RequireLogin } from '@/components/auth/RequireLogin';
 import TabSwitch from '@/components/ui/TabSwitch';
 import { Coupon, userService } from '@/services/user.service';
 import { formatDate } from '@/utils/dateUtils';
@@ -19,7 +20,7 @@ const couponTabs = [
   { key: 'expired' as const, label: '已过期' },
 ];
 
-export default function CouponScreen() {
+function CouponContent() {
   const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState<'unused' | 'expired'>('unused'); // 未使用 or 已过期
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -129,6 +130,14 @@ export default function CouponScreen() {
         />
       )}
     </SafeAreaView>
+  );
+}
+
+export default function CouponScreen() {
+  return (
+    <RequireLogin title="登录后查看优惠券" description="登录即可查看您的优惠券">
+      <CouponContent />
+    </RequireLogin>
   );
 }
 

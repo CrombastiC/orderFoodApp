@@ -1,9 +1,10 @@
 import {
   queueService,
-  tokenManager,
   type QueueStore,
   type QueueTicket,
 } from "@/services";
+import { useAuthGate } from "@/hooks/use-auth-gate";
+import { useAuthStore } from "@/stores/auth-store";
 import { useLocationStore } from "@/stores/location-store";
 import ToastManager from "@/utils/toast";
 import { router, useFocusEffect } from "expo-router";
@@ -30,6 +31,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function QueueStoresScreen() {
   const city = useLocationStore((state) => state.city);
+  const { requireLogin } = useAuthGate();
   const [stores, setStores] = useState<QueueStore[]>([]);
   const [currentTicket, setCurrentTicket] = useState<QueueTicket | null>(null);
   const [search, setSearch] = useState("");
@@ -53,7 +55,7 @@ export default function QueueStoresScreen() {
         }
       }
 
-      if (await tokenManager.isLoggedIn()) {
+      if (useAuthStore.getState().isLoggedIn) {
         const [ticketError, ticket] = await queueService.getCurrentTicket();
         if (!ticketError) setCurrentTicket(ticket);
       } else {
@@ -78,18 +80,17 @@ export default function QueueStoresScreen() {
     );
   }, [search, stores]);
 
-  const openTakeNumber = async (store: QueueStore) => {
-    if (!(await tokenManager.isLoggedIn())) {
-      ToastManager.show("请先登录后取号");
-      router.push("/auth/login");
-      return;
-    }
+  const openTakeNumber = (store: QueueStore) => {
     if (currentTicket) {
       router.push("/queue/ticket" as any);
       return;
     }
     setPartySize(2);
     setSelectedStore(store);
+  };
+
+  const handleTakeNumber = (store: QueueStore) => {
+    requireLogin(() => openTakeNumber(store));
   };
 
   const submitTicket = async () => {
@@ -218,7 +219,7 @@ export default function QueueStoresScreen() {
                     <Button
                       mode="contained"
                       buttonColor="#FF7214"
-                      onPress={() => openTakeNumber(item)}
+                      onPress={() => handleTakeNumber(item)}
                     >
                       {currentTicket ? "查看排队" : "立即取号"}
                     </Button>

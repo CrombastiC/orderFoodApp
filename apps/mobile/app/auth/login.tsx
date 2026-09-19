@@ -5,7 +5,8 @@
 import { API_CONFIG, CURRENT_ENV } from '@/config/api.config';
 import { TextInput } from '@/components/ui/PaperTextInput';
 import { useRequest } from '@/hooks/use-request';
-import { authService, tokenManager } from '@/services';
+import { authService } from '@/services';
+import { useAuthStore } from '@/stores/auth-store';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -30,6 +31,8 @@ export default function LoginScreen() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [phoneError, setPhoneError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+
+  const setSession = useAuthStore((state) => state.setSession);
 
   // 当从注册页跳转过来时,自动填充用户名和密码
   useEffect(() => {
@@ -86,7 +89,7 @@ export default function LoginScreen() {
           `${data?.message || '请检查您的手机号和密码'}\n\n当前API: ${API_CONFIG.baseURL}\nAPP_ENV: ${CURRENT_ENV}`
         );
       } else if (data) {
-        await tokenManager.saveLoginInfo(data);
+        await setSession(data);
         Alert.alert('登录成功', '欢迎回来！', [
           {
             text: '确定',

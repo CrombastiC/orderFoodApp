@@ -3,47 +3,15 @@
  */
 
 import MenuList, { MenuListItem } from '@/components/ui/MenuList';
+import { useAuthGate } from '@/hooks/use-auth-gate';
 import { userService, type UserProfile } from '@/services';
+import { useAuthStore } from '@/stores/auth-store';
 import ToastManager from '@/utils/toast';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-// 功能菜单配置
-const menuItems: MenuListItem[] = [
-  {
-    key: 'orders',
-    icon: 'clipboard-text-outline',
-    label: '我的订单',
-    onPress: () => router.push('/orders'),
-  },
-  {
-    key: 'lottery',
-    icon: 'slot-machine',
-    label: '幸运抽奖',
-    onPress: () => router.push('/(points)/luckyRoll' as any),
-  },
-  {
-    key: 'gift-card',
-    icon: 'gift-outline',
-    label: '礼品卡',
-    onPress: () => router.push('/(member)/gift-card'),
-  },
-  {
-    key: 'address',
-    icon: 'map-marker-outline',
-    label: '地址管理',
-    onPress: () => router.push('/user/address' as any),
-  },
-  {
-    key: 'customer-service',
-    icon: 'headphones',
-    label: '联系客服',
-    onPress: () => router.push('/user/support' as any),
-  },
-];
 
 export default function ProfileScreen() {
   const [userInfo, setUserInfo] = useState<UserProfile | null>(null);
@@ -52,6 +20,43 @@ export default function ProfileScreen() {
   const [signInStatus, setSignInStatus] = useState(false);// 是否已签到
   //连续签到天数
   const [consecutiveSignInDays, setConsecutiveSignInDays] = useState(0);
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+  const { requireLogin } = useAuthGate();
+
+  // 功能菜单配置
+  const menuItems: MenuListItem[] = [
+    {
+      key: 'orders',
+      icon: 'clipboard-text-outline',
+      label: '我的订单',
+      onPress: () => requireLogin(() => router.push('/orders')),
+    },
+    {
+      key: 'lottery',
+      icon: 'slot-machine',
+      label: '幸运抽奖',
+      onPress: () => router.push('/(points)/luckyRoll' as any),
+    },
+    {
+      key: 'gift-card',
+      icon: 'gift-outline',
+      label: '礼品卡',
+      onPress: () => requireLogin(() => router.push('/(member)/gift-card')),
+    },
+    {
+      key: 'address',
+      icon: 'map-marker-outline',
+      label: '地址管理',
+      onPress: () => requireLogin(() => router.push('/user/address' as any)),
+    },
+    {
+      key: 'customer-service',
+      icon: 'headphones',
+      label: '联系客服',
+      onPress: () => requireLogin(() => router.push('/user/support' as any)),
+    },
+  ];
+
   useEffect(() => {
     loadUserInfo();
     getSignInStatus();
@@ -66,6 +71,11 @@ export default function ProfileScreen() {
   );
 
   const loadUserInfo = async () => {
+    if (!useAuthStore.getState().isLoggedIn) {
+      setUserInfo(null);
+      setPhone('');
+      return;
+    }
     try {
       // 从API获取用户信息
       const [error, result] = await userService.getProfile();
@@ -90,6 +100,11 @@ export default function ProfileScreen() {
   };
   //获取签到状态
   const getSignInStatus = async () => {
+    if (!useAuthStore.getState().isLoggedIn) {
+      setSignInStatus(false);
+      setConsecutiveSignInDays(0);
+      return;
+    }
     try {
       const [error, result] = await userService.getSignInStatus();
       if (error) {
@@ -160,7 +175,7 @@ export default function ProfileScreen() {
           <View style={styles.userHeader}>
             <TouchableOpacity
               style={styles.avatarContainer}
-              onPress={() => router.push('/user/account')}
+              onPress={() => requireLogin(() => router.push('/user/account'))}
             >
               {userInfo?.avatar ? (
                 <Image source={{ uri: userInfo.avatar }} style={styles.avatar} />
@@ -173,24 +188,27 @@ export default function ProfileScreen() {
 
             <View style={styles.userBasicInfo}>
               <View style={styles.nameRow}>
-                <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">{userInfo?.username || 'Daisy'}</Text>
+                <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
+                  {isLoggedIn ? userInfo?.username || '用户' : '点击登录'}
+                </Text>
                 <View style={styles.memberBadge}>
                   <Text style={styles.memberBadgeText}>普通会员</Text>
                 </View>
               </View>
-              <Text style={styles.userPhone}>{phone || '156****3499'}</Text>
+              <Text style={styles.userPhone}>
+                {isLoggedIn ? phone || '' : '登录后享受更多权益'}
+              </Text>
             </View>
             {/* 签到相关 */}
             <View style={{ alignItems: 'center', gap: 8 }}>
               {/* 签到按钮 */}
               <TouchableOpacity
                 style={[styles.signInButton, signInStatus && styles.signInButtonDisabled]}
-                onPress={() => {
+                onPress={() => requireLogin(() => {
                   if (!signInStatus) {
                     signFunction();
                   }
-                }}
-                disabled={signInStatus}
+                })}
                 activeOpacity={0.7}
               >
                 <MaterialCommunityIcons
@@ -215,7 +233,7 @@ export default function ProfileScreen() {
 
           {/* 统计信息 */}
           <View style={styles.statsContainer}>
-            <TouchableOpacity onPress={() => router.push('/(member)/top-up')} activeOpacity={0.7} style={[styles.statItem, styles.statItemLeft]}>
+            <TouchableOpacity onPress={() => requireLogin(() => router.push('/(member)/top-up'))} activeOpacity={0.7} style={[styles.statItem, styles.statItemLeft]}>
               <View style={[styles.statContent, styles.statContentLeft]}>
                 <View style={styles.statValueContainer}>
                   <Text style={styles.statPrefix}>¥</Text>
@@ -226,7 +244,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             {/* <View style={styles.statDivider} /> */}
-            <TouchableOpacity onPress={() => router.push('/user/coupon')} activeOpacity={0.7} style={[styles.statItem, styles.statItemCenter]}>
+            <TouchableOpacity onPress={() => requireLogin(() => router.push('/user/coupon'))} activeOpacity={0.7} style={[styles.statItem, styles.statItemCenter]}>
               <View style={styles.statContent}>
                 <Text style={styles.statValue}>{userInfo?.couponCount || 0}</Text>
                 <Text style={styles.statLabel}>优惠券</Text>
@@ -234,7 +252,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             {/* <View style={styles.statDivider} /> */}
-            <TouchableOpacity onPress={() => router.push('/(points)/pointPage')} activeOpacity={0.7} style={[styles.statItem, styles.statItemCenter]}>
+            <TouchableOpacity onPress={() => requireLogin(() => router.push('/(points)/pointPage'))} activeOpacity={0.7} style={[styles.statItem, styles.statItemCenter]}>
               <View style={[styles.statContent, styles.statContentRight]}>
                 <Text style={styles.statValue}>{userInfo?.integral || 0}</Text>
                 <Text style={styles.statLabel}>积分</Text>

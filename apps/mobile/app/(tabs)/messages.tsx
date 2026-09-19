@@ -1,5 +1,6 @@
-import { supportService, tokenManager, type SupportConversationSummary } from '@/services';
-import ToastManager from '@/utils/toast';
+import { useAuthGate } from '@/hooks/use-auth-gate';
+import { supportService, type SupportConversationSummary } from '@/services';
+import { useAuthStore } from '@/stores/auth-store';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -9,9 +10,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function MessagesScreen() {
   const [conversation, setConversation] = useState<SupportConversationSummary | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const { requireLogin } = useAuthGate();
 
   const loadConversation = useCallback(async () => {
-    if (!(await tokenManager.isLoggedIn())) {
+    if (!useAuthStore.getState().isLoggedIn) {
       setConversation(null);
       return;
     }
@@ -23,13 +25,12 @@ export default function MessagesScreen() {
     loadConversation();
   }, [loadConversation]));
 
-  const openSupport = async () => {
-    if (!(await tokenManager.isLoggedIn())) {
-      ToastManager.show('请先登录后联系客服');
-      router.push('/auth/login');
-      return;
-    }
+  const openSupport = () => {
     router.push('/user/support' as any);
+  };
+
+  const handleSupportPress = () => {
+    requireLogin(openSupport);
   };
 
   const refresh = async () => {
@@ -48,7 +49,7 @@ export default function MessagesScreen() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#FF7214" />}
       >
-        <TouchableOpacity style={styles.messageCard} activeOpacity={0.75} onPress={openSupport}>
+        <TouchableOpacity style={styles.messageCard} activeOpacity={0.75} onPress={handleSupportPress}>
           <View style={styles.iconWrap}>
             <Icon source="headset" size={30} color="#fff" />
           </View>

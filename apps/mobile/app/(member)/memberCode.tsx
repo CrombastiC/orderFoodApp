@@ -1,3 +1,4 @@
+import { RequireLogin } from "@/components/auth/RequireLogin";
 import { tokenManager, userService, type UserProfile } from "@/services";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -8,7 +9,7 @@ import {
 } from "react-native";
 import { Card, Icon } from "react-native-paper";
 import QRCode from "react-native-qrcode-svg";
-export default function MemberCodeScreen() {
+function MemberCodeContent() {
   const [accountBalance, setAccountBalance] = useState<number>(0);
   // 生成随机会员码
   const [memberCode, setMemberCode] = useState("");
@@ -97,6 +98,14 @@ export default function MemberCodeScreen() {
       </Card.Content>
     </Card>
   </View>;
+}
+
+export default function MemberCodeScreen() {
+  return (
+    <RequireLogin title="登录后查看会员码" description="登录即可使用会员权益">
+      <MemberCodeContent />
+    </RequireLogin>
+  );
 }
 
 const styles =StyleSheet.create({

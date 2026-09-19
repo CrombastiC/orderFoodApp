@@ -2,6 +2,7 @@
  * 点餐页面
  */
 
+import { useAuthGate } from '@/hooks/use-auth-gate';
 import { getProductInfo } from '@/services/order.service';
 import { useCartStore } from '@/stores/cart-store';
 import { resolveImageUrl } from '@/utils/image';
@@ -74,6 +75,7 @@ function FoodImage({ uri }: { uri: string }) {
 }
 
 export default function OrderScreen() {
+  const { requireLogin } = useAuthGate();
   const [orderType, setOrderType] = useState<'dine-in' | 'takeout'>('dine-in');
   const [selectedCategory, setSelectedCategory] = useState('');//选择的分类ID
   const [categories, setCategories] = useState<Category[]>([]);
@@ -549,8 +551,8 @@ export default function OrderScreen() {
               setCartOrderType(orderType);
               setStoreName(storeName);
               setPeopleCount(1);
-              // 跳转结算页面
-              router.push('/(orderfood)/settlement');
+              // 跳转结算页面（未登录先弹登录面板）
+              requireLogin(() => router.push('/(orderfood)/settlement'));
             }}
           >
             <Text style={styles.checkoutButtonText}>去下单</Text>

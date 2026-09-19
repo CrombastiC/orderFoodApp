@@ -1,5 +1,7 @@
 import { CircleBorder, LotteryButton, LotteryResultModal } from '@/components/points';
+import { useAuthGate } from '@/hooks/use-auth-gate';
 import { LuckyRollData, LuckyRollDataResponse, pointsService, WinningInfo } from '@/services/points.service';
+import { useAuthStore } from '@/stores/auth-store';
 import { formatDate } from '@/utils/dateUtils';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, Image, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -20,6 +22,7 @@ const LOTTERY_PATH = [0, 1, 2, 5, 4, 3, 6, 7, 8];
 const RECORDS_PER_PAGE = 5;
 
 export default function LuckyRollScreen() {
+  const { requireLogin } = useAuthGate();
   const [luckyRollData, setLuckyRollData] = useState<LuckyRollData[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(-1); // 当前高亮的格子索引
   const [isRolling, setIsRolling] = useState<boolean>(false); // 是否正在抽奖
@@ -119,6 +122,11 @@ export default function LuckyRollScreen() {
   };
 
   const getLuckyRollData = async () => {
+    if (!useAuthStore.getState().isLoggedIn) {
+      setCurrentPoints(0);
+      setFreeDrawCount(0);
+      return;
+    }
     const [error, result] = await pointsService.getLuckyRollData();
     if (error) {
       console.error('获取抽奖数据失败:', error);
@@ -136,6 +144,11 @@ export default function LuckyRollScreen() {
   // 开始抽奖：先请求服务端决定中奖结果，再播放转盘动画
   const startLottery = async () => {
     if (isRolling) return; // 如果正在抽奖,不响应
+
+    if (!useAuthStore.getState().isLoggedIn) {
+      requireLogin(() => startLottery());
+      return;
+    }
 
     // 判断是否免费抽奖
     const costIntegral = freeDrawCount > 0 ? 0 : 200;

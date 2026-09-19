@@ -1,4 +1,5 @@
 import { API_CONFIG } from '@/config/api.config';
+import { useAuthStore } from '@/stores/auth-store';
 import ToastManager from '@/utils/toast';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios, {
@@ -8,7 +9,6 @@ import axios, {
   CreateAxiosDefaults,
   InternalAxiosRequestConfig,
 } from 'axios';
-import { router } from 'expo-router';
 import type { ApiResponse, TokenPair } from '@orderfood/common';
 
 const refreshTokenUrl = '/api/user/refresh-token';
@@ -247,21 +247,14 @@ class Request {
     this.redirectingToLogin = true;
     this.reset();
 
-    await AsyncStorage.multiRemove([
-      'token',
-      'refreshToken',
-      'userId',
-      'userInfo',
-    ]);
-
-    console.warn('Token已失效，请重新登录');
+    await useAuthStore.getState().clearSession();
+    useAuthStore.getState().requestLogin('expired');
 
     ToastManager.show('登录已过期，请重新登录');
 
     setTimeout(() => {
-      router.replace('/auth/login');
       this.redirectingToLogin = false;
-    }, 1500);
+    }, 500);
   }
 
   request<T, D = any>(config: AxiosRequestConfig<D>): Response<T> {

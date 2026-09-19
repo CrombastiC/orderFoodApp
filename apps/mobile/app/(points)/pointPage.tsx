@@ -1,5 +1,6 @@
 import { userService } from "@/services";
 import { PointRecord, pointsService } from "@/services/points.service";
+import { useAuthStore } from "@/stores/auth-store";
 import { formatDateTime } from "@/utils/dateUtils";
 import { useEffect, useState } from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
@@ -27,6 +28,10 @@ export default function PointPageScreen() {
   }, []);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const loadUserInfo = async () => {
+    if (!useAuthStore.getState().isLoggedIn) {
+      setUserInfo(null);
+      return;
+    }
     try {
       // 从API获取用户信息
       const [error, result] = await userService.getProfile();
@@ -47,6 +52,11 @@ export default function PointPageScreen() {
   };
 
   const getPointRecords = async (pageNum: number) => {
+    if (!useAuthStore.getState().isLoggedIn) {
+      setRecords([]);
+      setHasMore(false);
+      return;
+    }
     setLoading(true);
 
     // 调用服务获取积分收支记录

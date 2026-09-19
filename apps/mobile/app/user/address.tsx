@@ -1,3 +1,4 @@
+import { RequireLogin } from '@/components/auth/RequireLogin';
 import ToastManager from '@/utils/toast';
 import { Address, addressService, SaveAddressParams } from '@/services/address.service';
 import { Stack } from 'expo-router';
@@ -18,7 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 /** 表单初始值 */
 const EMPTY_FORM = { receiverName: '', phone: '', region: '', detail: '' };
 
-export default function AddressScreen() {
+function AddressContent() {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -246,6 +247,14 @@ export default function AddressScreen() {
         </View>
       </Modal>
     </SafeAreaView>
+  );
+}
+
+export default function AddressScreen() {
+  return (
+    <RequireLogin title="登录后管理地址" description="登录即可维护收货地址">
+      <AddressContent />
+    </RequireLogin>
   );
 }
 
