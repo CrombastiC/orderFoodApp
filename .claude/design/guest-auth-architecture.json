@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "游客浏览与登录拦截架构",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "output": "guest-auth-architecture.html",
+    "views": [
+      { "id": "guest-path", "label": "游客浏览路径", "focus": ["visitor", "publicPages", "http", "api", "db"], "note": "游客无需登录即可浏览公开内容，请求直达后端公开接口。" },
+      { "id": "login-gate", "label": "按需登录拦截", "focus": ["visitor", "authGate", "loginSheet", "authStore", "api"], "note": "点击需登录操作时底部滑出登录面板，登录后继续原操作。" },
+      { "id": "guard-path", "label": "鉴权与过期", "focus": ["http", "api", "guard", "db", "authGate"], "note": "JwtAuthGuard 校验令牌，401 时不再硬跳登录页，改为唤起登录面板。" }
+    ]
+  },
+  "components": [
+    { "id": "visitor", "type": "external", "label": "游客 / 登录用户", "sublabel": "Expo Go 真机", "pos": [30, 300], "size": [140, 68] },
+    { "id": "publicPages", "type": "frontend", "label": "公开页面", "sublabel": "首页·点餐·购物车·门店", "pos": [250, 280], "size": [170, 80] },
+    { "id": "http", "type": "security", "label": "request 拦截器", "sublabel": "JWT 注入 · 401 处理", "pos": [500, 280], "size": [160, 76] },
+    { "id": "api", "type": "backend", "label": "NestJS API", "sublabel": "/api/user/login 等", "pos": [760, 280], "size": [160, 80] },
+    { "id": "db", "type": "database", "label": "PostgreSQL", "sublabel": "Prisma · seed 抽奖记录", "pos": [1000, 280], "size": [160, 76] },
+    { "id": "guard", "type": "security", "label": "JwtAuthGuard", "sublabel": "全局守卫", "pos": [760, 140], "size": [160, 72] },
+    { "id": "authGate", "type": "security", "label": "AuthGate", "sublabel": "requireLogin()", "pos": [250, 470], "size": [170, 76] },
+    { "id": "loginSheet", "type": "frontend", "label": "LoginSheet", "sublabel": "底部面板 · cooker.png", "pos": [520, 470], "size": [180, 76] },
+    { "id": "authStore", "type": "frontend", "label": "auth-store", "sublabel": "Zustand 登录态", "pos": [800, 470], "size": [160, 72] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "移动端 apps/mobile", "wraps": ["publicPages", "http", "authGate", "loginSheet", "authStore"] },
+    { "kind": "region", "label": "后端 apps/api", "wraps": ["guard", "api"] }
+  ],
+  "connections": [
+    { "id": "visitor-browse", "from": "visitor", "to": "publicPages", "label": "浏览", "variant": "emphasis" },
+    { "id": "visitor-gated", "from": "visitor", "to": "authGate", "label": "点击需登录操作", "fromSide": "bottom", "toSide": "left", "labelAt": [140, 430] },
+    { "id": "gate-sheet", "from": "authGate", "to": "loginSheet", "label": "requireLogin()", "variant": "dashed", "labelDy": 26 },
+    { "id": "sheet-login", "from": "loginSheet", "to": "api", "label": "POST /api/user/login", "fromSide": "top", "toSide": "bottom", "labelDy": -26 },
+    { "id": "sheet-store", "from": "loginSheet", "to": "authStore", "label": "setSession()", "labelDy": 26 },
+    { "id": "pages-http", "from": "publicPages", "to": "http", "label": "公开数据请求" },
+    { "id": "http-api", "from": "http", "to": "api", "label": "Bearer JWT" },
+    { "id": "api-db", "from": "api", "to": "db", "label": "Prisma" },
+    { "id": "api-guard", "from": "api", "to": "guard", "label": "校验令牌", "fromSide": "top", "toSide": "bottom", "labelDy": -24 },
+    { "id": "http-expired", "from": "http", "to": "authGate", "label": "401 → requestLogin()", "variant": "dashed", "fromSide": "bottom", "toSide": "right", "labelAt": [430, 430] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "游客可见", "items": ["首页、点餐菜单、购物车", "门店与城市选择", "积分商城、抽奖页壳与围观大奖/中奖播报"] },
+    { "dot": "emerald", "title": "需登录", "items": ["下单结算、我的、会员与余额充值", "优惠券、地址、在线客服、取号", "抽奖与兑换等参与动作"] },
+    { "dot": "rose", "title": "登录态一致性", "items": ["auth-store 为单一登录态来源", "401 不再硬跳登录页，改为唤起登录面板", "登录成功后自动继续被拦截的操作"] }
+  ]
+}
