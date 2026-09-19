@@ -10,9 +10,6 @@ const config = getDefaultConfig(projectRoot);
 // Enable package exports resolution for Tailwind v4
 config.resolver.unstable_enablePackageExports = true;
 
-// pnpm 兼容性: 启用符号链接解析（关键！）
-config.resolver.unstable_enableSymlinks = true;
-
 // Monorepo support: watch the entire monorepo root so Metro can resolve
 // pnpm symlinks that point into node_modules/.pnpm/...
 config.watchFolders = [monorepoRoot];

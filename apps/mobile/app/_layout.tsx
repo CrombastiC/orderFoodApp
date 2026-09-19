@@ -6,7 +6,7 @@
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useProfileStore } from '@/stores/profile-store';
 import { ToastProvider } from '@/utils/toast';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router/react-navigation";
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';

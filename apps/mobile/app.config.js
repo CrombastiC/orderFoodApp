@@ -7,7 +7,6 @@ module.exports = {
     icon: "./assets/images/icon.png",
     scheme: "rncomponents",
     userInterfaceStyle: "automatic",
-    newArchEnabled: true,
     ios: {
       supportsTablet: true,
       infoPlist: {
@@ -24,7 +23,6 @@ module.exports = {
         backgroundImage: "./assets/images/android-icon-background.png",
         monochromeImage: "./assets/images/android-icon-monochrome.png"
       },
-      edgeToEdgeEnabled: true,
       softwareKeyboardLayoutMode: "resize",
       predictiveBackGestureEnabled: false,
       permissions: [
@@ -44,6 +42,7 @@ module.exports = {
     },
     plugins: [
       "expo-router",
+      "expo-font",
       [
         "expo-build-properties",
         {

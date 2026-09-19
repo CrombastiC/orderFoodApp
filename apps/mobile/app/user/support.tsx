@@ -5,7 +5,7 @@ import {
 } from "@/services";
 import { resolveImageUrl } from "@/utils/image";
 import ToastManager from "@/utils/toast";
-import { useHeaderHeight } from "@react-navigation/elements";
+import { useHeaderHeight } from "expo-router/react-navigation";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect } from "expo-router";
