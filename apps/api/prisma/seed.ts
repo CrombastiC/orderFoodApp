@@ -96,6 +96,18 @@ const categoryData = [
 const ADMIN_PHONE = '13800000000';
 const ADMIN_PASSWORD = 'admin123';
 
+// 抽奖展示用户（用于围观大奖/中奖播报的种子数据）
+const showUserData = [
+  { phone: '13900000001', username: '草莓啵啵' },
+  { phone: '13900000002', username: '奶茶星人' },
+  { phone: '13900000003', username: '炸鸡一号' },
+  { phone: '13900000004', username: '布丁控' },
+  { phone: '13900000005', username: '深夜食堂' },
+  { phone: '13900000006', username: '柠檬精' },
+  { phone: '13900000007', username: '小笼包' },
+  { phone: '13900000008', username: '芝士青年' },
+];
+
 const storeData = [
   {
     id: 'store-shanghai-zhonghai',
@@ -293,6 +305,68 @@ async function main() {
     });
   }
   console.log(`🎉 已同步 ${storeData.length} 家排队门店`);
+
+  // 8. 初始化抽奖展示用户 + 中奖记录（围观大奖 / 中奖播报）
+  const existingRecordCount = await prisma.lotteryRecord.count();
+  if (existingRecordCount > 0) {
+    console.log(`⚠️  已存在 ${existingRecordCount} 条抽奖记录，跳过初始化`);
+  } else {
+    // 8.1 展示用户（幂等 upsert）
+    const showUsers: { id: string; username: string }[] = [];
+    const defaultPassword = await bcrypt.hash('123456', 10);
+    for (const item of showUserData) {
+      const user = await prisma.user.upsert({
+        where: { phone: item.phone },
+        update: { username: item.username },
+        create: {
+          phone: item.phone,
+          username: item.username,
+          password: defaultPassword,
+        },
+      });
+      showUsers.push({ id: user.id, username: user.username });
+    }
+
+    // 8.2 按奖品名建立映射（奖品可能是本次新建或已存在）
+    const allPrizes = await prisma.lotteryPrize.findMany();
+    const prizeByName = new Map(allPrizes.map((p) => [p.prizeName, p]));
+
+    // 8.3 中奖记录配置：混合实物大奖与积分奖
+    const recordPlan: { prizeName: string; userIndex: number; hoursAgo: number }[] = [
+      { prizeName: 'iPhone 16 Pro', userIndex: 0, hoursAgo: 6 },
+      { prizeName: '华为 MatePad', userIndex: 3, hoursAgo: 20 },
+      { prizeName: 'iPhone 16 Pro', userIndex: 5, hoursAgo: 30 },
+      { prizeName: '积分 ×500', userIndex: 1, hoursAgo: 2 },
+      { prizeName: '积分 ×200', userIndex: 2, hoursAgo: 5 },
+      { prizeName: '积分 ×100', userIndex: 4, hoursAgo: 9 },
+      { prizeName: '积分 ×50', userIndex: 6, hoursAgo: 13 },
+      { prizeName: '积分 ×200', userIndex: 7, hoursAgo: 17 },
+      { prizeName: '积分 ×150', userIndex: 0, hoursAgo: 24 },
+      { prizeName: '积分 ×80', userIndex: 3, hoursAgo: 34 },
+      { prizeName: '积分 ×100', userIndex: 5, hoursAgo: 44 },
+      { prizeName: '积分 ×30', userIndex: 2, hoursAgo: 58 },
+    ];
+
+    let createdRecordCount = 0;
+    for (const plan of recordPlan) {
+      const prize = prizeByName.get(plan.prizeName);
+      const user = showUsers[plan.userIndex];
+      if (!prize || !user) continue;
+      await prisma.lotteryRecord.create({
+        data: {
+          userId: user.id,
+          prizeId: prize.id,
+          // 固定为单抽成本，不能填 0，否则会污染“今日免费抽是否已用”的判断
+          costIntegral: 200,
+          createdAt: new Date(Date.now() - plan.hoursAgo * 60 * 60 * 1000),
+        },
+      });
+      createdRecordCount += 1;
+    }
+    console.log(
+      `\n🎉 成功初始化 ${createdRecordCount} 条抽奖记录（含围观大奖与中奖播报）！`,
+    );
+  }
 }
 
 main()
