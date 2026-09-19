@@ -238,7 +238,7 @@ export default function AddressScreen() {
               >
                 <Text style={styles.cancelText}>取消</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modalButton} onPress={handleSave}>
+              <TouchableOpacity style={[styles.modalButton, styles.saveButton]} onPress={handleSave}>
                 <Text style={styles.saveText}>保存</Text>
               </TouchableOpacity>
             </View>
@@ -408,6 +408,9 @@ const styles = StyleSheet.create({
   cancelButton: {
     backgroundColor: '#f0f0f0',
     marginRight: 10,
+  },
+  saveButton: {
+    backgroundColor: 'rgb(255, 140, 50)',
   },
   cancelText: {
     color: '#666',
